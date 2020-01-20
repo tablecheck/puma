@@ -255,4 +255,29 @@ class TestIntegration < Minitest::Test
 
     assert_equal 15, status
   end
+
+  def test_term_signal_suppress_in_single_mode
+    skip NO_FORK_MSG unless HAS_FORK
+
+    pid = start_forked_server("-C test/config/suppress_exception.rb test/rackup/hello.ru")
+    _, status = stop_forked_server(pid)
+
+    assert_equal 0, status
+  end
+
+  def test_term_signal_suppress_in_clustered_mode
+    skip NO_FORK_MSG unless HAS_FORK
+
+    server("-w 2 -C test/config/suppress_exception.rb test/rackup/hello.ru")
+
+    Process.kill(:TERM, @server.pid)
+    begin
+      Process.wait @server.pid
+    rescue Errno::ECHILD
+    end
+    status = $?.exitstatus
+
+    assert_equal 0, status
+    @server = nil # prevent `#teardown` from killing already killed server
+  end
 end
