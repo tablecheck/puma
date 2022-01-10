@@ -241,6 +241,8 @@ module Puma
       end
 
       close_binder_listeners unless @status == :restart
+
+      raise(SignalException, "SIGTERM") if @raise_sigterm
     end
 
     def do_forceful_stop
@@ -490,10 +492,8 @@ module Puma
 
       begin
         Signal.trap "SIGTERM" do
-          # Shortcut the control flow in case raise_exception_on_sigterm is true
-          do_graceful_stop
-
-          raise(SignalException, "SIGTERM") if @options[:raise_exception_on_sigterm]
+          stop
+          @raise_sigterm = true if @options[:raise_exception_on_sigterm]
         end
       rescue Exception
         log "*** SIGTERM not implemented, signal based gracefully stopping unavailable!"
